@@ -17,6 +17,10 @@ MOUNTS=`find /proc/*/mounts | xargs grep $ID 2>/dev/null`
 printf "PID\tNAME\t\tMNTNS\n"
 echo "$MOUNTS" | while read LINE; do
   PID=`echo $LINE | cut -d ":" -f1 | cut -d "/" -f3`
+  # Ignore self and thread-self
+  if [ "$PID" == "self" ] || [ "$PID" == "thread-self" ]; then
+    continue
+  fi
   NAME=`ps -q $PID -o comm=`
   MNTNS=`readlink /proc/$PID/ns/mnt`
   printf "%s\t%s\t\t%s\n" "$PID" "$NAME" "$MNTNS"
