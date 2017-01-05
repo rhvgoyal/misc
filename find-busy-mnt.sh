@@ -10,9 +10,9 @@ fi
 
 ID=$1
 
-MOUNTS=`find /proc/*/mounts | xargs grep $ID`
+MOUNTS=`find /proc/*/mounts | xargs grep $ID 2>/dev/null`
 
-#echo "$MOUNTS"
+[ -z "$MOUNTS" ] &&  echo "No pids found" && exit 0
 
 printf "PID\tNAME\t\tMNTNS\n"
 echo "$MOUNTS" | while read LINE; do
