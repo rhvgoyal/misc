@@ -1,0 +1,69 @@
+#!/bin/bash
+
+# A tool to take quilt patch and commit it in git tree. This is useful
+# when patch is adding new files which need to have execute permission.
+# By default "git quiltimport" does not do that.
+set -e
+
+usage() {
+  echo "$0: <patch-file>"
+}
+
+apply_patch() {
+  local patchfile=$1
+  local output
+  local list_files file new_files subject signedby
+
+  git diff > /dev/null
+
+  # Prepare list of new files. First apply patch using --dry-run.
+  if ! output=$(patch -p1 --dry-run < $patchfile); then
+    echo "Failed to apply patch $patchfile using option --dry-run"
+    return 1
+  fi
+
+  list_files=`grep "checking file" <<< $output | sed -e 's/checking file //g'`
+
+  # extract subject
+  subject=`grep "Subject:" $patchfile | sed 's/Subject: //'`
+  # extract subject
+  [ -z "$subject" ] && { echo "$patchfile does not have Subject line" && exit 1; }
+
+  signedby=`grep "Signed-off-by:" $patchfile`
+  [ -z "$signedby" ] && { echo "$patchfile does not have Signed-off-by line" && exit 1; }
+
+  message=`sed -n '/Subject/,/Signed-off-by:/p' $patchfile  | grep -v "Subject:" | grep -v "Signed-off-by:"`
+
+  # Prepare list of new files
+  for file in "$list_files";do
+    [ -e "$file" ] && continue
+    new_files="$new_files $file"
+  done
+
+  # apply patch
+  if ! patch -p1 < $patchfile; then
+    echo "Failed to apply patch $patchfile"
+    exit 1
+  fi
+
+  # chmod new files
+  for file in "$new_files";do
+    chmod 755 $file
+  done
+
+  # Add all files
+  for file in "$list_files";do
+    git add $file
+  done
+
+  # Commit patch
+  git commit -s -m "$subject" -m "$message"
+}
+
+# Main script
+
+[ $# -ne 1 ] && { usage; exit 1; }
+
+PATCHFILE=$1
+
+apply_patch $PATCHFILE
