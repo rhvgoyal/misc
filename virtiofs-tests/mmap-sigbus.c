@@ -46,25 +46,18 @@ int main(int argc, char *argv[])
 	void *cur_ptr;
 	int key;
 
-	if (argc < 2  || argc > 3) {
-		printf("Usage:%s <file-to-mmap> [<addr-to-map-at-in-hex>]\n", argv[0]);
+	if (argc != 2) {
+		printf("Usage:%s <file-to-mmap>\n", argv[0]);
 		exit(1);
-	}
-
-	if (argc == 3) {
-		errno = 0;
-		requested_addr = strtoul(argv[2], &endptr, 16);
-		if (errno) {
-			fprintf(stderr, "strtoul(%s) failed. %s\n", argv[2], strerror(errno));
-			exit(1);
-		}
 	}
 
 	register_sigaction();
 
 	fd = open(argv[1], O_RDWR);
-	if (fd == -1)
+	if (fd == -1) {
 		fprintf(stderr, "Failed to open file %s:%s, errorno=%d\n", argv[0], strerror(errno), errno);
+		exit(1);
+	}
 
         if(fstat(fd, &st_buf) == -1) {
                 fprintf(stderr, "fstat failed %s, errorno=%d\n", strerror(errno), errno);
@@ -72,10 +65,8 @@ int main(int argc, char *argv[])
         }
 
 	map_length = st_buf.st_size;
-	if (argc == 3)
-		map_addr = mmap((void*)requested_addr, map_length, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_FIXED, fd, 0);
-	else
-		map_addr = mmap(NULL, map_length, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	map_addr = mmap(NULL, map_length, PROT_READ | PROT_WRITE, MAP_SHARED,
+			fd, 0);
 	if (map_addr == MAP_FAILED) {
 		fprintf(stderr, "mmap failed %s, errorno=%d\n", strerror(errno), errno);
 		exit(1);	
@@ -99,7 +90,7 @@ int main(int argc, char *argv[])
 	}
 
 	printf("Wrote to first page. Truncate file to 0 length and Enter. Will read after that and expect SIGBUS\n");
-	scanf(" ");
+	getchar();
 	printf("Reading from mmap() region addr=0x%lx\n", cur_ptr);
 	memcpy(buf_in, cur_ptr, 10);
 	buf_in[10] = '\0';
