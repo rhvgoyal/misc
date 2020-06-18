@@ -1,0 +1,52 @@
+To verify sanity of virtiofs we should run following tests at a minimum.
+
+- xfstests (quick)
+
+  git://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git
+
+- unionmount-testsuite (overlayfs over virtiofs)
+
+  https://github.com/amir73il/unionmount-testsuite
+
+xfstest virtiofs configuration
+==============================
+1. Run two virtiofsd instances on host.
+
+  $ ./virtiofsd --socket-path=/tmp/vhostqemu1 -o source=/mnt/virtiofs-source1/ -o xattr --daemonize  
+  $ ./virtiofsd --socket-path=/tmp/vhostqemu2 -o source=/mnt/virtiofs-source2/ -o xattr --daemonize
+
+2. Configure qemu to export two virtiofs instances. Append following.
+
+   -object memory-backend-file,id=mem,size=32G,mem-path=/dev/shm,share=on -numa node,memdev=mem -chardev socket,id=char0,path=/tmp/vhostqemu1 -device vhost-user-fs-pci,chardev=char0,tag=myfs1,queue-size=1024 -chardev socket,id=char1,path=/tmp/vhostqemu2 -device vhost-user-fs-pci,chardev=char2,tag=myfs2,queue-size=1024
+
+3. Boot into guest and pull in xfstests and install all needed packages
+   from README. Create a config file "local.config" with following.
+
+  export TEST_DEV=myfs1
+  export TEST_DIR=/mnt/virtiofs1
+  export SCRATCH_DEV=myfs2
+  export SCRATCH_MNT=/mnt/virtiofs2
+  export FSTYP=virtiofs
+
+
+4. Run xfstests quick tests and make sure there are no regressions.
+
+   $ ./check -g quick
+
+
+unionmount-testsuite (overlay over virtiofs)
+============================================
+- Mount a virtiofs instance
+
+  $ mount -t virtiofs myfs1 /mnt/virtiofs1
+  $ mkdir -p /mnt/virtiofs1/test/
+  $ export UNIONMOUNT_BASEDIR="/mnt/virtiofs1/test/"
+  $ cd unionmount-testsuite
+
+There are many configurations one can run tests in. Some of the suggested
+ones are.
+
+ $ ./run --ov
+ $ ./run --ov --meta
+ $ ./run --ov --meta --verify
+ $ ./run --ov=10 --meta --verify
