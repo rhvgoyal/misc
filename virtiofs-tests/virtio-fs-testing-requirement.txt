@@ -40,7 +40,7 @@ unionmount-testsuite (overlay over virtiofs)
 
   $ mount -t virtiofs myfs1 /mnt/virtiofs1
   $ mkdir -p /mnt/virtiofs1/test/
-  $ export UNIONMOUNT_BASEDIR="/mnt/virtiofs1/test/"
+  $ export UNIONMOUNT_BASEDIR="/mnt/virtiofs1/test"
   $ cd unionmount-testsuite
 
 There are many configurations one can run tests in. Some of the suggested
@@ -50,3 +50,21 @@ ones are.
  $ ./run --ov --meta
  $ ./run --ov --meta --verify
  $ ./run --ov=10 --meta --verify
+
+xfstest overlay tests (overlay over virtiofs)
+=============================================
+- Mount a virtiofs instance 
+
+  $ mount -t virtiofs myfs1 /mnt/virtiofs1
+  $ mkdir -p /mnt/virtiofs1/xfstest-testdev -p /mnt/virtiofs1/xfstest-scratchdev
+
+- Drop following local.config in xfstest/ git tree.
+
+  export TEST_DEV=/mnt/virtiofs/xfstest-testdev
+  export TEST_DIR=/mnt/virtiofs/xfstest-testdev
+  export SCRATCH_DEV=/mnt/virtiofs/xfstest-scratchdev
+  export SCRATCH_MNT=/mnt/virtiofs/xfstest-scratchdev
+
+- Run overlay tests and make sure there are no regressions.
+
+  ./check -overlay overlay/0[0-9][0-9]
