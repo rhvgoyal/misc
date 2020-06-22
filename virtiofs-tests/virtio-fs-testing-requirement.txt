@@ -1,4 +1,9 @@
-To verify sanity of virtiofs we should run following tests at a minimum.
+To verify sanity of virtiofs we should run following tests at a minimum and
+make sure there are no regressions.
+
+- pjdfstests
+
+  https://github.com/pjd/pjdfstest
 
 - xfstests (quick)
 
