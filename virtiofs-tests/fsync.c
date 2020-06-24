@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
 
 	fd = open(argv[1], O_WRONLY);
 	if (fd == -1)
-		fprintf(stderr, "Failed to open file %s:%s, errorno=%d\n", argv[0], strerror(errno), errno);
+		fprintf(stderr, "Failed to open file %s:%s, errorno=%d\n", argv[1], strerror(errno), errno);
 
 
 	ret = fsync(fd);
