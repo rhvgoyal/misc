@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	fd = open(argv[1], O_WRONLY);
+	fd = open(argv[1], O_RDWR);
 	if (fd == -1)
 		fprintf(stderr, "Failed to open file %s:%s, errorno=%d\n", argv[1], strerror(errno), errno);
 
