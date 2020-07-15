@@ -7,6 +7,11 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+/*
+ * Get a shell with CAP_FSETID dropped and run this program.
+ * $ capsh --drop=cap_fsetid --
+ * $ ./clear-setuid-test /mnt/virtiofs/foo.txt
+ */
 int main(int argc, char *argv[])
 {
 	int fd, ret, len;
