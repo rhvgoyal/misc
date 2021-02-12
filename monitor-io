@@ -1,5 +1,7 @@
 #!/bin/bash
 
+#  Copyright 2021 Red Hat, Inc.
+#
 #  Purpose:  Monitor block device performance
 #  Author:   Vivek Goyal <vgoyal@redhat.com>
 
