@@ -10,15 +10,22 @@ _INTERVAL="5"
 # Default average wait thresholds in ms
 _R_AWAIT_THRESHOLD=50
 _W_AWAIT_THRESHOLD=50
-
+_PRINT_FORMAT="%-24s%-16s%-16s\n"
 usage() {
   cat <<-FOE
 Usage: $1 [OPTIONS] <block-dev-to-monitor>
 Options:
   -h, --help	Print help message
-  -r, --rlat	Average read latency threshold
-  -w, --wlat	Average write latency threshold
+  -r, --rlat	Average read latency threshold in ms (default 50ms)
+  -w, --wlat	Average write latency threshold in ms (default 50ms)
+  -i		Sampling Interval in seconds (default 5 second)
 FOE
+}
+
+print_header() {
+  #echo "Read latency threshold=$_R_AWAIT_THRESHOLD Write latency threshold=$_W_AWAIT_THRESHOLD"
+  #printf "\n\n"
+  printf "$_PRINT_FORMAT" "Date/Time" "Read Lat(ms)" "Write Lat(ms)"
 }
 
 monitor_device() {
@@ -35,32 +42,33 @@ monitor_device() {
 
     f_r_await=`echo $line | cut -d " " -f6`
     f_w_await=`echo $line | cut -d " " -f12`
-    #echo "r_await=$f_r_await w_await=$f_w_await"
+    timestamp=`date +"%x %T"`
+
+    printf "$_PRINT_FORMAT" "$timestamp" "$f_r_await" "$f_w_await"
 
     r_await=${f_r_await%%.*}
     w_await=${f_w_await%%.*}
 
     if [ $r_await -gt $_R_AWAIT_THRESHOLD ];then
-      timestamp=`date +"%x %T"`
-      printf "[%s] Read Latency %sms is higher than threshold %sms\n" "$timestamp" "$r_await" "$_R_AWAIT_THRESHOLD"
+      printf "%s Read Latency %sms is higher than threshold %sms\n" "$timestamp" "$r_await" "$_R_AWAIT_THRESHOLD"
     fi
 
     if [ $w_await -gt $_W_AWAIT_THRESHOLD ];then
-      timestamp=`date +"%x %T"`
-      printf "[%s] Write Latency %sms is higher than threshold %sms \n" "$timestamp" "$w_await" "$_W_AWAIT_THRESHOLD"
+      printf "%s Write Latency %sms is higher than threshold %sms \n" "$timestamp" "$w_await" "$_W_AWAIT_THRESHOLD"
     fi
   done
 }
 
 # Main
 _INPUT_STR=""$@
-_OPTS=`getopt -o hr:w: -l help -l rlat: -l wlat: -- $_INPUT_STR`
+_OPTS=`getopt -o hr:w:i: -l help -l rlat: -l wlat: -- $_INPUT_STR`
 eval set -- "$_OPTS"
 while true ; do
     case "$1" in
         -h | --help)  usage $(basename $0); exit 0;;
         -r | --rlat)  _R_AWAIT_THRESHOLD=$2; shift 2;;
         -w | --wlat)  _W_AWAIT_THRESHOLD=$2; shift 2;;
+        -i)  _INTERVAL=$2; shift 2;;
         --) shift; break;;
     esac
 done
@@ -86,5 +94,5 @@ if [ ! -x "/usr/bin/iostat" ]; then
   exit 1
 fi
 
-echo "Read latency threshold=$_R_AWAIT_THRESHOLD Write latency threshold=$_W_AWAIT_THRESHOLD"
+print_header
 monitor_device "$_BLOCK_DEV"
