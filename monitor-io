@@ -1,0 +1,90 @@
+#!/bin/bash
+
+#  Purpose:  Monitor block device performance
+#  Author:   Vivek Goyal <vgoyal@redhat.com>
+
+set -e
+
+# Sampling interval in seconds
+_INTERVAL="5"
+# Default average wait thresholds in ms
+_R_AWAIT_THRESHOLD=50
+_W_AWAIT_THRESHOLD=50
+
+usage() {
+  cat <<-FOE
+Usage: $1 [OPTIONS] <block-dev-to-monitor>
+Options:
+  -h, --help	Print help message
+  -r, --rlat	Average read latency threshold
+  -w, --wlat	Average write latency threshold
+FOE
+}
+
+monitor_device() {
+  local bdev_path=$1
+  local bdev_base=$(basename $bdev_path)
+  local field_dev f_r_await f_w_await r_await w_await
+  local timestamp
+
+  /usr/bin/iostat -d $bdev_path -x -y $_INTERVAL | while read line;
+  do
+    # TODO: Use awk instead
+    field_dev=`echo $line | cut -d " " -f1`
+    [ "$field_dev" != "$bdev_base" ] && continue
+
+    f_r_await=`echo $line | cut -d " " -f6`
+    f_w_await=`echo $line | cut -d " " -f12`
+    #echo "r_await=$f_r_await w_await=$f_w_await"
+
+    r_await=${f_r_await%%.*}
+    w_await=${f_w_await%%.*}
+
+    if [ $r_await -gt $_R_AWAIT_THRESHOLD ];then
+      timestamp=`date +"%x %T"`
+      printf "[%s] Read Latency %sms is higher than threshold %sms\n" "$timestamp" "$r_await" "$_R_AWAIT_THRESHOLD"
+    fi
+
+    if [ $w_await -gt $_W_AWAIT_THRESHOLD ];then
+      timestamp=`date +"%x %T"`
+      printf "[%s] Write Latency %sms is higher than threshold %sms \n" "$timestamp" "$w_await" "$_W_AWAIT_THRESHOLD"
+    fi
+  done
+}
+
+# Main
+_INPUT_STR=""$@
+_OPTS=`getopt -o hr:w: -l help -l rlat: -l wlat: -- $_INPUT_STR`
+eval set -- "$_OPTS"
+while true ; do
+    case "$1" in
+        -h | --help)  usage $(basename $0); exit 0;;
+        -r | --rlat)  _R_AWAIT_THRESHOLD=$2; shift 2;;
+        -w | --wlat)  _W_AWAIT_THRESHOLD=$2; shift 2;;
+        --) shift; break;;
+    esac
+done
+
+if [ $# -ne 1 ];then
+  usage $(basename $0)
+  exit 1
+fi
+
+_BLOCK_DEV=$1
+if [ -z $_BLOCK_DEV ]; then
+  usage $(basename $0)
+  exit 1
+fi
+
+if [ ! -b "$_BLOCK_DEV" ]; then
+  echo "Error: $_BLOCK_DEV is not a block device"
+  exit 1
+fi
+
+if [ ! -x "/usr/bin/iostat" ]; then
+  echo "Error: /usr/bin/iostat is not available/executable."
+  exit 1
+fi
+
+echo "Read latency threshold=$_R_AWAIT_THRESHOLD Write latency threshold=$_W_AWAIT_THRESHOLD"
+monitor_device "$_BLOCK_DEV"
