@@ -28,4 +28,5 @@ int main(int argc, char *argv[])
 
 	/* Print few elements */
 	printf("st_dev=0x%x st_ino=%lu\n", statbuf.st_dev, statbuf.st_ino);
+	printf("st_nlink=%ld mode=0x%x\n", statbuf.st_nlink, statbuf.st_mode);
 }
