@@ -16,6 +16,8 @@ int main(int argc, char *argv[])
 	char *buf = "Hello";
 	ssize_t written;
 	char proc_path[128];
+	char *xattr_name = "user.foo";
+	char *xattr_value = "bar";
 
 	if (argc != 2) {
 		printf("Usage:%s <file-to-open>\n", argv[0]);
@@ -31,13 +33,15 @@ int main(int argc, char *argv[])
 	printf("Open(%s, O_PATH | O_NOFOLLOW) succeeded.\n", argv[1]);
 
 	sprintf(proc_path, "/proc/%d/fd/%d", getpid(), fd);
-	ret = setxattr(proc_path, "trusted.foo", NULL, 0, 0);
+	ret = setxattr(proc_path, xattr_name, xattr_value,
+			strlen(xattr_value) + 1, 0);
 	if (ret == -1) {
-		fprintf(stderr, "setxattr(%s) failed:%s\n", strerror(errno));
+		fprintf(stderr, "setxattr() failed:%s\n", strerror(errno));
 		exit(1);
 	}
-	printf("setxattr(%s, trusted.foo) succeeded.\n");
+	printf("setxattr(%s, %s, %s) succeeded.\n", argv[1], xattr_name,
+		xattr_value);
 	printf("Press a key to exit.\n");
-	scanf(" ");
+	getchar();
 	close(fd);
 }
