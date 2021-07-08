@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
 	i = 0;
 	while (1) {
 		sprintf(xattr_name, "user.%d", i);
-		ret = setxattr(argv[1], xattr_name, xattr_value,
+		ret = lsetxattr(argv[1], xattr_name, xattr_value,
 				strlen(xattr_value) + 1, 0);
 		if (ret == -1) {
 			fprintf(stderr, "setxattr() failed. i=%d:%s\n",
