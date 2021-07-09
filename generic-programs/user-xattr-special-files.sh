@@ -3,22 +3,38 @@
 # Test user.* xattr on symlinks and special files on various filesystems.
 
 set -e
-TEST_FS="ext4 xfs btrfs"
+TEST_FS="ext4 xfs btrfs overlay"
 
-make_filesystem () {
-  local fstype=$1 block_dev=$2
+setup_filesystem () {
+  local fstype=$1 block_dev=$2 mnt=$3
 
   if [ "$fstype" == "ext4" ];then
     mkfs.ext4 -F $block_dev > /dev/null
+    mount -t $fstype $block_dev $mnt
   elif [ "$fstype" == "xfs" ];then
     mkfs.xfs -f $block_dev > /dev/null
+    mount -t $fstype $block_dev $mnt
   elif [ "$fstype" == "btrfs" ];then
     mkfs.btrfs -f $block_dev > /dev/null
+    mount -t $fstype $block_dev $mnt
+  elif [ "$fstype" == "overlay" ];then
+    mkdir -p $mnt/lower $mnt/upper $mnt/work
+    mount -t overlay -o lowerdir=$mnt/lower,upperdir=$mnt/upper,workdir=$mnt/work none $mnt
   else
     echo "Unknown filesystem $fstype"
     exit 1
   fi
 }
+
+cleanup_filesystem() {
+  local fstype=$1 mnt=$2
+
+  umount $mnt
+  if [ "$fstype" == "overlay" ];then
+     rm -rf $mnt/lower $mnt/upper $mnt/work
+  fi
+}
+
 
 test_user_xattr()
 {
@@ -63,10 +79,9 @@ run_fs_test() {
   local fstype=$1 block_dev=$2
 
   echo "Running test on fstype=$fstype block_dev=$block_dev"
-  make_filesystem $fstype $block_dev
-  mount -t $fstype $block_dev $MNT_POINT
+  setup_filesystem $fstype $block_dev $MNT_POINT
   test_user_xattr_special_files $fstype $MNT_POINT
-  umount $MNT_POINT
+  cleanup_filesystem $fstype $MNT_POINT
 }
 
 run_test() {
