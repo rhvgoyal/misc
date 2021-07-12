@@ -3,7 +3,16 @@
 # Test user.* xattr on symlinks and special files on various filesystems.
 
 set -e
-TEST_FS="ext4 xfs btrfs overlay"
+TEST_FS="ext4 xfs btrfs overlay nfs"
+
+setup_nfs() {
+  local mnt=$1
+
+  mkdir -p $mnt/nfs-server
+  echo "$mnt/nfs-server 127.0.0.1(insecure,no_root_squash,rw,async)" >> /etc/exports
+  systemctl restart nfs-server
+  mount -t nfs 127.0.0.1:$mnt/nfs-server $mnt
+}
 
 setup_filesystem () {
   local fstype=$1 block_dev=$2 mnt=$3
@@ -20,6 +29,8 @@ setup_filesystem () {
   elif [ "$fstype" == "overlay" ];then
     mkdir -p $mnt/lower $mnt/upper $mnt/work
     mount -t overlay -o lowerdir=$mnt/lower,upperdir=$mnt/upper,workdir=$mnt/work none $mnt
+  elif [ "$fstype" == "nfs" ];then
+    setup_nfs $mnt
   else
     echo "Unknown filesystem $fstype"
     exit 1
@@ -32,6 +43,10 @@ cleanup_filesystem() {
   umount $mnt
   if [ "$fstype" == "overlay" ];then
      rm -rf $mnt/lower $mnt/upper $mnt/work
+  elif [ "$fstype" == "nfs" ];then
+     systemctl stop nfs-server
+     rm -rf $mnt/nfs-server
+     sed -i "\,^$mnt/nfs-server,d" /etc/exports
   fi
 }
 
@@ -59,7 +74,7 @@ test_user_xattr_special_files()
   
   # Test symlink
   touch $mnt/foo.txt
-  ln -s $mnt/foo.txt $mnt/foo-link.txt
+  ln -s ./foo.txt $mnt/foo-link.txt
   if ! test_user_xattr "$mnt/foo-link.txt";then
     echo "Test failed on fstype=$fstype filetype=symlink"
     return
@@ -82,6 +97,7 @@ run_fs_test() {
   setup_filesystem $fstype $block_dev $MNT_POINT
   test_user_xattr_special_files $fstype $MNT_POINT
   cleanup_filesystem $fstype $MNT_POINT
+  echo
 }
 
 run_test() {
