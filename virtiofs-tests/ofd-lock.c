@@ -127,9 +127,13 @@ int main(int argc, char *argv[])
 	if (ret == -1) {
 		fprintf(stderr, "Failed to lock file:%s, errorno=%d\n",
 			strerror(errno), errno);
+		exit(1);
 	}
 	printf("Acquired OFD lock on whole file.\n");
 	printf("Press a key to exit.\n");
 	getchar();
-	close(fd);
+	if (close(fd)) {
+		fprintf(stderr, "close(fd) failed.:%s, errorno=%d\n",
+			strerror(errno), errno);
+        }
 }
