@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
 	}
 
 	printf("Acquired Write lock on whole file. Press a key to release lock\n");
-	scanf("d");
+	getchar();
 	memset(&flock, 0, sizeof(flock));
 	flock.l_type = F_UNLCK;
 	flock.l_whence = SEEK_SET;
@@ -53,7 +53,6 @@ int main(int argc, char *argv[])
 			strerror(errno), errno);
 		exit(1);
 	}
-	printf("Press a key to exit\n");
-	scanf("d");
+	printf("Released lock on whole file.\n");
 	close(fd);
 }
