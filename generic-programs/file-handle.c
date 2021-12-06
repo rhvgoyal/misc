@@ -7,10 +7,56 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <limits.h>
+
+/* This function has been taken from name_to_handle_at() man page */
+int open_mount_path_by_id(int mount_id)
+{
+	char *linep;
+	size_t lsize;
+	char mount_path[PATH_MAX];
+	int mi_mount_id, found;
+	ssize_t nread;
+	FILE *fp;
+
+	fp = fopen("/proc/self/mountinfo", "r");
+	if (fp == NULL) {
+		fprintf(stderr, "fopen(/proc/self/mountinfo) failed:%s\n",
+			strerror(errno));
+		exit(1);
+	}
+
+	found = 0;
+	linep = NULL;
+	while (!found) {
+		nread = getline(&linep, &lsize, fp);
+		if (nread == -1)
+			break;
+
+		nread = sscanf(linep, "%d %*d %*s %*s %s",
+				&mi_mount_id, mount_path);
+		if (nread != 2) {
+			fprintf(stderr, "Bad sscanf()\n");
+			exit(EXIT_FAILURE);
+		}
+		if (mi_mount_id == mount_id)
+			found = 1;
+	}
+	free(linep);
+
+	fclose(fp);
+
+	if (!found) {
+		fprintf(stderr, "Could not find mount point\n");
+		exit(EXIT_FAILURE);
+	}
+
+	return open(mount_path, O_RDONLY);
+}
 
 int main(int argc, char *argv[])
 {
-	int fd, flags = 0, ret;
+	int fd, flags = 0, ret, mount_fd;
 	mode_t mode = 0;
 	struct file_handle *fh;
 	size_t fh_size = sizeof(struct file_handle) + MAX_HANDLE_SZ;
@@ -35,7 +81,11 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	fd = open_by_handle_at(AT_FDCWD, fh, O_RDWR);
+	printf("name_to_handle_at() succeeded\n");
+
+	mount_fd = open_mount_path_by_id(mount_id);
+
+	fd = open_by_handle_at(mount_fd, fh, O_RDWR);
 	if (fd == -1) {
 		fprintf(stderr, "open_by_handle_at(%s) failed:%s, errorno=%d\n", argv[0], strerror(errno), errno);
 		exit(1);
