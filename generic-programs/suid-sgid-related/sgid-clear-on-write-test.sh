@@ -17,7 +17,7 @@ FILENAME="foo.txt"
 rm $FILENAME
 touch $FILENAME
 chmod 644  $FILENAME
-chown test:test  $FILENAME
+chown 2:2  $FILENAME
 
 # First just test with SGID bit set (no SETUID) bit set. This does not
 # clear SGID bit. 
